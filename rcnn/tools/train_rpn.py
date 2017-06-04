@@ -1,8 +1,19 @@
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import absolute_import
+from builtins import dict
+from builtins import int
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from builtins import zip
+from past.utils import old_div
 import argparse
+import logging
 import pprint
 import mxnet as mx
 
-from ..logger import logger
 from ..config import config, default, generate_config
 from ..symbol import *
 from ..core import callback, metric
@@ -16,6 +27,11 @@ def train_rpn(network, dataset, image_set, root_path, dataset_path,
               frequent, kvstore, work_load_list, no_flip, no_shuffle, resume,
               ctx, pretrained, epoch, prefix, begin_epoch, end_epoch,
               train_shared, lr, lr_step):
+    # set up logger
+    logging.basicConfig()
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+
     # setup config
     config.TRAIN.BATCH_IMAGES = 1
 
@@ -28,7 +44,7 @@ def train_rpn(network, dataset, image_set, root_path, dataset_path,
     input_batch_size = config.TRAIN.BATCH_IMAGES * batch_size
 
     # print config
-    logger.info(pprint.pformat(config))
+    pprint.pprint(config)
 
     # load dataset and prepare imdb for training
     image_sets = [iset for iset in image_set.split('+')]
@@ -47,15 +63,16 @@ def train_rpn(network, dataset, image_set, root_path, dataset_path,
     # infer max shape
     max_data_shape = [('data', (input_batch_size, 3, max([v[0] for v in config.SCALES]), max([v[1] for v in config.SCALES])))]
     max_data_shape, max_label_shape = train_data.infer_shape(max_data_shape)
-    logger.info('providing maximum shape %s %s' % (max_data_shape, max_label_shape))
+    print('providing maximum shape', max_data_shape, max_label_shape)
 
     # infer shape
     data_shape_dict = dict(train_data.provide_data + train_data.provide_label)
     arg_shape, out_shape, aux_shape = sym.infer_shape(**data_shape_dict)
-    arg_shape_dict = dict(zip(sym.list_arguments(), arg_shape))
-    out_shape_dict = dict(zip(sym.list_outputs(), out_shape))
-    aux_shape_dict = dict(zip(sym.list_auxiliary_states(), aux_shape))
-    logger.info('output shape %s' % pprint.pformat(out_shape_dict))
+    arg_shape_dict = dict(list(zip(sym.list_arguments(), arg_shape)))
+    out_shape_dict = dict(list(zip(sym.list_outputs(), out_shape)))
+    aux_shape_dict = dict(list(zip(sym.list_auxiliary_states(), aux_shape)))
+    print('output shape')
+    pprint.pprint(out_shape_dict)
 
     # load and initialize params
     if resume:
@@ -111,14 +128,14 @@ def train_rpn(network, dataset, image_set, root_path, dataset_path,
     lr_epoch_diff = [epoch - begin_epoch for epoch in lr_epoch if epoch > begin_epoch]
     lr = base_lr * (lr_factor ** (len(lr_epoch) - len(lr_epoch_diff)))
     lr_iters = [int(epoch * len(roidb) / batch_size) for epoch in lr_epoch_diff]
-    logger.info('lr %f lr_epoch_diff %s lr_iters %s' % (lr, lr_epoch_diff, lr_iters))
+    print('lr', lr, 'lr_epoch_diff', lr_epoch_diff, 'lr_iters', lr_iters)
     lr_scheduler = mx.lr_scheduler.MultiFactorScheduler(lr_iters, lr_factor)
     # optimizer
     optimizer_params = {'momentum': 0.9,
                         'wd': 0.0005,
                         'learning_rate': lr,
                         'lr_scheduler': lr_scheduler,
-                        'rescale_grad': (1.0 / batch_size),
+                        'rescale_grad': (old_div(1.0, batch_size)),
                         'clip_gradient': 5}
 
     # train
@@ -161,7 +178,7 @@ def parse_args():
 
 def main():
     args = parse_args()
-    logger.info('Called with argument: %s' % args)
+    print('Called with argument:', args)
     ctx = [mx.gpu(int(i)) for i in args.gpus.split(',')]
     train_rpn(args.network, args.dataset, args.image_set, args.root_path, args.dataset_path,
               args.frequent, args.kvstore, args.work_load_list, args.no_flip, args.no_shuffle, args.resume,

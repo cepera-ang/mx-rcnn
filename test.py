@@ -1,6 +1,11 @@
+from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
 import argparse
 import mxnet as mx
-from rcnn.logger import logger
 from rcnn.config import config, default, generate_config
 from rcnn.tools.test_rcnn import test_rcnn
 
@@ -31,8 +36,8 @@ def parse_args():
 
 def main():
     args = parse_args()
-    logger.info('Called with argument: %s' % args)
     ctx = mx.gpu(args.gpu)
+    print(args)
     test_rcnn(args.network, args.dataset, args.image_set, args.root_path, args.dataset_path,
               ctx, args.prefix, args.epoch,
               args.vis, args.shuffle, args.has_rpn, args.proposal, args.thresh)

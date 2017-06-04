@@ -1,3 +1,9 @@
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
 import numpy as np
 from easydict import EasyDict as edict
 
@@ -12,9 +18,10 @@ config.FIXED_PARAMS = ['conv1', 'conv2']
 config.FIXED_PARAMS_SHARED = ['conv1', 'conv2', 'conv3', 'conv4', 'conv5']
 
 # dataset related params
-config.NUM_CLASSES = 21
-config.SCALES = [(600, 1000)]  # first is scale (the shorter side); second is max size
-config.ANCHOR_SCALES = (8, 16, 32)
+config.NUM_CLASSES = 10
+config.SCALES = [(2000, 2000)]  # first is scale (the shorter side); second is max size
+config.ANCHOR_SCALES = (4, 8, 12)
+# config.ANCHOR_SCALES = (8, 16, 32)
 config.ANCHOR_RATIOS = (0.5, 1, 2)
 config.NUM_ANCHORS = len(config.ANCHOR_SCALES) * len(config.ANCHOR_RATIOS)
 
@@ -76,7 +83,7 @@ config.TEST.BATCH_IMAGES = 1
 config.TEST.CXX_PROPOSAL = True
 config.TEST.RPN_NMS_THRESH = 0.7
 config.TEST.RPN_PRE_NMS_TOP_N = 6000
-config.TEST.RPN_POST_NMS_TOP_N = 300
+config.TEST.RPN_POST_NMS_TOP_N = 1000
 config.TEST.RPN_MIN_SIZE = config.RPN_FEAT_STRIDE
 
 # RPN generate proposal
@@ -149,14 +156,21 @@ dataset.coco.root_path = 'data'
 dataset.coco.dataset_path = 'data/coco'
 dataset.coco.NUM_CLASSES = 81
 
+dataset.dstl_cars = edict()
+dataset.dstl_cars.dataset = 'dstl_cars'
+dataset.dstl_cars.image_set = 'dstl_train'
+dataset.dstl_cars.test_image_set = 'dstl_test'
+dataset.dstl_cars.root_path = 'data'
+dataset.dstl_cars.dataset_path = 'd:/patches'
+dataset.dstl_cars.NUM_CLASSES = 10
 
 def generate_config(_network, _dataset):
-    for k, v in network[_network].items():
+    for k, v in list(network[_network].items()):
         if k in config:
             config[k] = v
         elif k in default:
             default[k] = v
-    for k, v in dataset[_dataset].items():
+    for k, v in list(dataset[_dataset].items()):
         if k in config:
             config[k] = v
         elif k in default:

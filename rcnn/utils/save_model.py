@@ -1,3 +1,9 @@
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
 import mxnet as mx
 
 
@@ -12,7 +18,7 @@ def save_checkpoint(prefix, epoch, arg_params, aux_params):
     :return: None
     prefix-epoch.params will be saved for parameters.
     """
-    save_dict = {('arg:%s' % k) : v for k, v in arg_params.items()}
-    save_dict.update({('aux:%s' % k) : v for k, v in aux_params.items()})
+    save_dict = {('arg:%s' % k) : v for k, v in list(arg_params.items())}
+    save_dict.update({('aux:%s' % k) : v for k, v in list(aux_params.items())})
     param_name = '%s-%04d.params' % (prefix, epoch)
     mx.nd.save(param_name, save_dict)

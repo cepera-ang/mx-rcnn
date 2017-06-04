@@ -1,3 +1,7 @@
+from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
 # --------------------------------------------------------  
 # Fast R-CNN  
 # Copyright (c) 2015 Microsoft  
@@ -5,6 +9,9 @@
 # Written by Ross Girshick  
 # --------------------------------------------------------  
   
+from builtins import super
+from future import standard_library
+standard_library.install_aliases()
 import numpy as np  
 import os  
 from os.path import join as pjoin  
@@ -58,7 +65,7 @@ def locate_cuda():
     cudaconfig = {'home':home, 'nvcc':nvcc,  
                   'include': pjoin(home, 'include'),  
                   'lib64': pjoin(home, lib_dir)}  
-    for k, v in cudaconfig.iteritems():  
+    for k, v in list(cudaconfig.items()):  
         if not os.path.exists(v):  
             raise EnvironmentError('The CUDA %s path could not be located in %s' % (k, v))  
   
@@ -129,30 +136,31 @@ ext_modules = [
         "bbox",  
         sources=["bbox.pyx"],  
         #define_macros={'/LD'},  
-        #extra_compile_args={'cl': ['/link', '/DLL', '/OUT:cython_bbox.dll']},  
+        extra_compile_args={'cl': ['/link', '/DLL', '/OUT:cython_bbox.dll']},
         #extra_compile_args={'cl': ['/LD']},  
-        extra_compile_args={'cl': []},  
-        include_dirs = [numpy_include]  
-    ),  
-    Extension(  
-        "cpu_nms",  
-        sources=["cpu_nms.pyx"],  
-        extra_compile_args={'cl': []},  
-        include_dirs = [numpy_include],  
-    ),  
-    # Extension(  
-    #    'pycocotools._mask',  
-    #    sources=['pycocotools\\maskApi.c', 'pycocotools\\_mask.pyx'],  
-    #    include_dirs = [numpy_include, 'pycocotools'],  
-    #    extra_compile_args={'cl': []},  
-    #),  
-    #Extension(   # just used to get nms\gpu_nms.obj  
-    #    "nms.gpu_nms",  
-    #    sources=['nms\\gpu_nms.pyx'],  
-    #    language='c++',  
-    #    extra_compile_args={'cl': []},  
-    #    include_dirs = [numpy_include]  
-    #),  
+        # extra_compile_args={'cl': ['/DLL']},
+        # extra_postargs=['/DLL'],
+        include_dirs = [numpy_include]
+    ),
+    Extension(
+        "cpu_nms",
+        sources=["cpu_nms.pyx"],
+        extra_compile_args={'cl': ['/link', '/DLL']},
+        include_dirs = [numpy_include],
+    ),
+    # # Extension(
+    # #    'pycocotools._mask',
+    # #    sources=['pycocotools\\maskApi.c', 'pycocotools\\_mask.pyx'],
+    # #    include_dirs = [numpy_include, 'pycocotools'],
+    # #    extra_compile_args={'cl': []},
+    # #),
+    # #Extension(   # just used to get nms\gpu_nms.obj
+    # #    "nms.gpu_nms",
+    # #    sources=['nms\\gpu_nms.pyx'],
+    # #    language='c++',
+    # #    extra_compile_args={'cl': []},
+    # #    include_dirs = [numpy_include]
+    # #),
 ]  
   
 setup(  

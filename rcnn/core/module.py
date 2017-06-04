@@ -2,7 +2,15 @@
 varying with training iterations. If shapes vary, executors will rebind,
 using shared arrays from the initial module binded with maximum shape.
 """
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
 
+from builtins import super
+from builtins import dict
+from future import standard_library
+standard_library.install_aliases()
 import logging
 
 from mxnet import context as ctx
@@ -173,7 +181,7 @@ class MutableModule(BaseModule):
 
         # decide if shape changed
         shape_changed = False
-        for k, v in current_shapes.items():
+        for k, v in list(current_shapes.items()):
             if v != input_shapes[k]:
                 shape_changed = True
 

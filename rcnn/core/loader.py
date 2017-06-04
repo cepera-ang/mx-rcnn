@@ -1,3 +1,15 @@
+from __future__ import division
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import absolute_import
+from builtins import super
+from builtins import dict
+from builtins import int
+from future import standard_library
+standard_library.install_aliases()
+from builtins import zip
+from builtins import range
+from past.utils import old_div
 import mxnet as mx
 import numpy as np
 from mxnet.executor_manager import _split_input_slice
@@ -56,7 +68,7 @@ class TestLoader(mx.io.DataIter):
     def iter_next(self):
         return self.cur + self.batch_size <= self.size
 
-    def next(self):
+    def __next__(self):
         if self.iter_next():
             self.get_batch()
             self.cur += self.batch_size
@@ -68,7 +80,7 @@ class TestLoader(mx.io.DataIter):
             raise StopIteration
 
     def getindex(self):
-        return self.cur / self.batch_size
+        return old_div(self.cur, self.batch_size)
 
     def getpad(self):
         if self.cur + self.batch_size > self.size:
@@ -160,7 +172,7 @@ class ROIIter(mx.io.DataIter):
     def iter_next(self):
         return self.cur + self.batch_size <= self.size
 
-    def next(self):
+    def __next__(self):
         if self.iter_next():
             self.get_batch()
             self.cur += self.batch_size
@@ -171,7 +183,7 @@ class ROIIter(mx.io.DataIter):
             raise StopIteration
 
     def getindex(self):
-        return self.cur / self.batch_size
+        return old_div(self.cur, self.batch_size)
 
     def getpad(self):
         if self.cur + self.batch_size > self.size:
@@ -204,11 +216,11 @@ class ROIIter(mx.io.DataIter):
             label_list.append(label)
 
         all_data = dict()
-        for key in data_list[0].keys():
+        for key in list(data_list[0].keys()):
             all_data[key] = tensor_vstack([batch[key] for batch in data_list])
 
         all_label = dict()
-        for key in label_list[0].keys():
+        for key in list(label_list[0].keys()):
             all_label[key] = tensor_vstack([batch[key] for batch in label_list])
 
         self.data = [mx.nd.array(all_data[name]) for name in self.data_name]
@@ -298,7 +310,7 @@ class AnchorLoader(mx.io.DataIter):
     def iter_next(self):
         return self.cur + self.batch_size <= self.size
 
-    def next(self):
+    def __next__(self):
         if self.iter_next():
             self.get_batch()
             self.cur += self.batch_size
@@ -309,7 +321,7 @@ class AnchorLoader(mx.io.DataIter):
             raise StopIteration
 
     def getindex(self):
-        return self.cur / self.batch_size
+        return old_div(self.cur, self.batch_size)
 
     def getpad(self):
         if self.cur + self.batch_size > self.size:
@@ -365,7 +377,7 @@ class AnchorLoader(mx.io.DataIter):
         new_label_list = []
         for data, label in zip(data_list, label_list):
             # infer label shape
-            data_shape = {k: v.shape for k, v in data.items()}
+            data_shape = {k: v.shape for k, v in list(data.items())}
             del data_shape['im_info']
             _, feat_shape, _ = self.feat_sym.infer_shape(**data_shape)
             feat_shape = [int(i) for i in feat_shape[0]]

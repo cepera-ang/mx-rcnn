@@ -1,3 +1,7 @@
+from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
 # --------------------------------------------------------
 # Fast R-CNN
 # Copyright (c) 2015 Microsoft
@@ -5,10 +9,13 @@
 # Written by Ross Girshick
 # --------------------------------------------------------
 
+from builtins import super
+from future import standard_library
+standard_library.install_aliases()
 import numpy as np
 import os
 from os.path import join as pjoin
-#from distutils.core import setup
+# from distutils.core import setup
 from setuptools import setup
 from distutils.extension import Extension
 from Cython.Distutils import build_ext
@@ -56,7 +63,7 @@ def locate_cuda():
     cudaconfig = {'home':home, 'nvcc':nvcc,
                   'include': pjoin(home, 'include'),
                   'lib64': pjoin(home, lib_dir)}
-    for k, v in cudaconfig.iteritems():
+    for k, v in list(cudaconfig.items()):
         if not os.path.exists(v):
             raise EnvironmentError('The CUDA %s path could not be located in %s' % (k, v))
 
@@ -94,7 +101,7 @@ def customize_compiler_for_nvcc(self):
     # based on source extension: we add it.
     def compile(sources, output_dir=None, macros=None, include_dirs=None, debug=0, extra_preargs=None, extra_postargs=None, depends=None):
         postfix=os.path.splitext(sources[0])[1]
-        
+
         if postfix == '.cu':
             # use the cuda for .cu files
             #self.set_executable('compiler_so', CUDA['nvcc'])
@@ -102,8 +109,7 @@ def customize_compiler_for_nvcc(self):
             # from the extra_compile_args in the Extension class
             postargs = extra_postargs['nvcc']
         else:
-            postargs = extra_postargs['gcc']
-
+            postargs = extra_postargs['cl']
 
         return super(sources, output_dir, macros, include_dirs, debug, extra_preargs, postargs, depends)
         # reset the default compiler_so, which we might have changed for cuda
@@ -127,8 +133,9 @@ ext_modules = [
         "_mask",
         sources=['maskApi.c', '_mask.pyx'],
         include_dirs = [numpy_include, 'pycocotools'],
-        extra_compile_args={
-            'gcc': ['/Qstd=c99']},
+        extra_objects = [r'D:\mx-rcnn\rcnn\pycocotools\build\temp.win-amd64-3.5\Release\maskApi.obj'],
+        extra_compile_args={'cl': ['/link', '/DLL']},
+        # extra_compile_args={},e
     ),
     #Extension(   # just used to get nms\gpu_nms.obj
     #    "nms.gpu_nms",
@@ -142,6 +149,7 @@ ext_modules = [
 setup(
     name='fast_rcnn',
     ext_modules=ext_modules,
+
     # inject our custom trigger
     cmdclass={'build_ext': custom_build_ext},
 )

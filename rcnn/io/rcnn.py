@@ -11,7 +11,15 @@ roidb extended format [image_index]
     ['image', 'height', 'width', 'flipped',
      'boxes', 'gt_classes', 'gt_overlaps', 'max_classes', 'max_overlaps', 'bbox_targets']
 """
+from __future__ import division
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import absolute_import
 
+from future import standard_library
+standard_library.install_aliases()
+from builtins import range
+from past.utils import old_div
 import numpy as np
 import numpy.random as npr
 
@@ -57,7 +65,7 @@ def get_rcnn_batch(roidb):
 
     assert config.TRAIN.BATCH_ROIS % config.TRAIN.BATCH_IMAGES == 0, \
         'BATCHIMAGES {} must divide BATCH_ROIS {}'.format(config.TRAIN.BATCH_IMAGES, config.TRAIN.BATCH_ROIS)
-    rois_per_image = config.TRAIN.BATCH_ROIS / config.TRAIN.BATCH_IMAGES
+    rois_per_image = old_div(config.TRAIN.BATCH_ROIS, config.TRAIN.BATCH_IMAGES)
     fg_rois_per_image = np.round(config.TRAIN.FG_FRACTION * rois_per_image).astype(int)
 
     rois_array = list()
@@ -150,7 +158,7 @@ def sample_rois(rois, fg_rois_per_image, rois_per_image, num_classes,
     # pad more to ensure a fixed minibatch size
     while keep_indexes.shape[0] < rois_per_image:
         gap = np.minimum(len(rois), rois_per_image - keep_indexes.shape[0])
-        gap_indexes = npr.choice(range(len(rois)), size=gap, replace=False)
+        gap_indexes = npr.choice(list(range(len(rois))), size=gap, replace=False)
         keep_indexes = np.append(keep_indexes, gap_indexes)
 
     # select labels
@@ -165,8 +173,7 @@ def sample_rois(rois, fg_rois_per_image, rois_per_image, num_classes,
     else:
         targets = bbox_transform(rois[:, 1:], gt_boxes[gt_assignment[keep_indexes], :4])
         if config.TRAIN.BBOX_NORMALIZATION_PRECOMPUTED:
-            targets = ((targets - np.array(config.TRAIN.BBOX_MEANS))
-                       / np.array(config.TRAIN.BBOX_STDS))
+            targets = (old_div((targets - np.array(config.TRAIN.BBOX_MEANS)), np.array(config.TRAIN.BBOX_STDS)))
         bbox_target_data = np.hstack((labels[:, np.newaxis], targets))
 
     bbox_targets, bbox_weights = \

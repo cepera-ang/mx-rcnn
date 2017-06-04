@@ -1,7 +1,15 @@
 """
 Generate base anchors on index 0
 """
+from __future__ import division
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import absolute_import
 
+from future import standard_library
+standard_library.install_aliases()
+from builtins import range
+from past.utils import old_div
 import numpy as np
 
 
@@ -15,7 +23,7 @@ def generate_anchors(base_size=16, ratios=[0.5, 1, 2],
     base_anchor = np.array([1, 1, base_size, base_size]) - 1
     ratio_anchors = _ratio_enum(base_anchor, ratios)
     anchors = np.vstack([_scale_enum(ratio_anchors[i, :], scales)
-                         for i in xrange(ratio_anchors.shape[0])])
+                         for i in range(ratio_anchors.shape[0])])
     return anchors
 
 
@@ -53,7 +61,7 @@ def _ratio_enum(anchor, ratios):
 
     w, h, x_ctr, y_ctr = _whctrs(anchor)
     size = w * h
-    size_ratios = size / ratios
+    size_ratios = old_div(size, ratios)
     ws = np.round(np.sqrt(size_ratios))
     hs = np.round(ws * ratios)
     anchors = _mkanchors(ws, hs, x_ctr, y_ctr)

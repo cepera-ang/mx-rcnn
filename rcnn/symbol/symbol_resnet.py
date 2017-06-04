@@ -1,6 +1,15 @@
+from __future__ import division
+from __future__ import absolute_import
+from __future__ import unicode_literals
+from __future__ import print_function
+from builtins import int
+from future import standard_library
+standard_library.install_aliases()
+from builtins import range
+from past.utils import old_div
 import mxnet as mx
-import proposal
-import proposal_target
+from . import proposal
+from . import proposal_target
 from rcnn.config import config
 
 eps = 2e-5
@@ -88,7 +97,7 @@ def get_resnet_train(num_classes=config.NUM_CLASSES, num_anchors=config.NUM_ANCH
                                            normalization='valid', use_ignore=True, ignore_label=-1, name="rpn_cls_prob")
     # bounding box regression
     rpn_bbox_loss_ = rpn_bbox_weight * mx.symbol.smooth_l1(name='rpn_bbox_loss_', scalar=3.0, data=(rpn_bbox_pred - rpn_bbox_target))
-    rpn_bbox_loss = mx.sym.MakeLoss(name='rpn_bbox_loss', data=rpn_bbox_loss_, grad_scale=1.0 / config.TRAIN.RPN_BATCH_SIZE)
+    rpn_bbox_loss = mx.sym.MakeLoss(name='rpn_bbox_loss', data=rpn_bbox_loss_, grad_scale=old_div(1.0, config.TRAIN.RPN_BATCH_SIZE))
 
     # ROI proposal
     rpn_cls_act = mx.symbol.SoftmaxActivation(
@@ -121,7 +130,7 @@ def get_resnet_train(num_classes=config.NUM_CLASSES, num_anchors=config.NUM_ANCH
 
     # Fast R-CNN
     roi_pool = mx.symbol.ROIPooling(
-        name='roi_pool5', data=conv_feat, rois=rois, pooled_size=(14, 14), spatial_scale=1.0 / config.RCNN_FEAT_STRIDE)
+        name='roi_pool5', data=conv_feat, rois=rois, pooled_size=(14, 14), spatial_scale=old_div(1.0, config.RCNN_FEAT_STRIDE))
 
     # res5
     unit = residual_unit(data=roi_pool, num_filter=filter_list[3], stride=(2, 2), dim_match=False, name='stage4_unit1')
@@ -137,7 +146,7 @@ def get_resnet_train(num_classes=config.NUM_CLASSES, num_anchors=config.NUM_ANCH
     # bounding box regression
     bbox_pred = mx.symbol.FullyConnected(name='bbox_pred', data=pool1, num_hidden=num_classes * 4)
     bbox_loss_ = bbox_weight * mx.symbol.smooth_l1(name='bbox_loss_', scalar=1.0, data=(bbox_pred - bbox_target))
-    bbox_loss = mx.sym.MakeLoss(name='bbox_loss', data=bbox_loss_, grad_scale=1.0 / config.TRAIN.BATCH_ROIS)
+    bbox_loss = mx.sym.MakeLoss(name='bbox_loss', data=bbox_loss_, grad_scale=old_div(1.0, config.TRAIN.BATCH_ROIS))
 
     # reshape output
     label = mx.symbol.Reshape(data=label, shape=(config.TRAIN.BATCH_IMAGES, -1), name='label_reshape')
@@ -187,7 +196,7 @@ def get_resnet_test(num_classes=config.NUM_CLASSES, num_anchors=config.NUM_ANCHO
 
     # Fast R-CNN
     roi_pool = mx.symbol.ROIPooling(
-        name='roi_pool5', data=conv_feat, rois=rois, pooled_size=(14, 14), spatial_scale=1.0 / config.RCNN_FEAT_STRIDE)
+        name='roi_pool5', data=conv_feat, rois=rois, pooled_size=(14, 14), spatial_scale=old_div(1.0, config.RCNN_FEAT_STRIDE))
 
     # res5
     unit = residual_unit(data=roi_pool, num_filter=filter_list[3], stride=(2, 2), dim_match=False, name='stage4_unit1')

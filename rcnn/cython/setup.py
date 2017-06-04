@@ -1,3 +1,7 @@
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
 # --------------------------------------------------------
 # Fast R-CNN
 # Copyright (c) 2015 Microsoft
@@ -5,6 +9,9 @@
 # Written by Ross Girshick
 # --------------------------------------------------------
 
+from builtins import super
+from future import standard_library
+standard_library.install_aliases()
 import os
 from os.path import join as pjoin
 from setuptools import setup
@@ -37,11 +44,11 @@ def locate_cuda():
     # first check if the CUDAHOME env variable is in use
     if 'CUDAHOME' in os.environ:
         home = os.environ['CUDAHOME']
-        nvcc = pjoin(home, 'bin', 'nvcc')
+        nvcc = pjoin(home, 'bin', 'nvcc.exe')
     else:
         # otherwise, search the PATH for NVCC
         default_path = pjoin(os.sep, 'usr', 'local', 'cuda', 'bin')
-        nvcc = find_in_path('nvcc', os.environ['PATH'] + os.pathsep + default_path)
+        nvcc = 'C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v8.0\\bin\\nvcc.exe'
         if nvcc is None:
             raise EnvironmentError('The nvcc binary could not be '
                 'located in your $PATH. Either add it to your path, or set $CUDAHOME')
@@ -50,7 +57,7 @@ def locate_cuda():
     cudaconfig = {'home':home, 'nvcc':nvcc,
                   'include': pjoin(home, 'include'),
                   'lib64': pjoin(home, 'lib64')}
-    for k, v in cudaconfig.iteritems():
+    for k, v in list(cudaconfig.items()):
         if not os.path.exists(v):
             raise EnvironmentError('The CUDA %s path could not be located in %s' % (k, v))
 

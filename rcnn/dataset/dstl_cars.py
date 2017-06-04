@@ -1,5 +1,5 @@
 """
-Pascal VOC database
+DSTL CARS database
 This class loads ground truth notations from standard Pascal VOC XML data formats
 and transform them into IMDB format. Selective search is used for proposals, see roidb
 function. Results are written as the Pascal VOC format. Evaluation is based on mAP
@@ -13,45 +13,46 @@ from __future__ import division
 from builtins import super
 from builtins import dict
 from builtins import open
-from builtins import int
 from future import standard_library
 standard_library.install_aliases()
 from builtins import zip
 from builtins import range
 import pickle
-import cv2
+# import cv2
 import os
 import numpy as np
+import pandas as pd
 
 from .imdb import IMDB
-from .pascal_voc_eval import voc_eval
 from .ds_utils import unique_boxes, filter_small_boxes
+from tqdm import tqdm
 
 
-class PascalVOC(IMDB):
+
+class dstl_cars(IMDB):
     def __init__(self, image_set, root_path, devkit_path):
         """
         fill basic information to initialize imdb
-        :param image_set: 2007_trainval, 2007_test, etc
+        :param image_set: dstl_cars
         :param root_path: 'selective_search_data' and 'cache'
         :param devkit_path: data and results
         :return: imdb object
         """
-        year, image_set = image_set.split('_')
-        super(PascalVOC, self).__init__('voc_' + year, image_set, root_path, devkit_path)  # set self.name
-        self.year = year
+        super(dstl_cars, self).__init__('dstl_cars', image_set, root_path, devkit_path)  # set self.name
+
+        self.simple_labels = pd.read_csv('D:/dstl_cars/{}.csv'.format(image_set))
+
         self.root_path = root_path
         self.devkit_path = devkit_path
-        self.data_path = os.path.join(devkit_path, 'VOC' + year)
+
+        self.data_path = os.path.join('d:/patches_{}'.format(image_set))
 
         self.classes = ['__background__',  # always index 0
-                        'aeroplane', 'bicycle', 'bird', 'boat',
-                        'bottle', 'bus', 'car', 'cat', 'chair',
-                        'cow', 'diningtable', 'dog', 'horse',
-                        'motorbike', 'person', 'pottedplant',
-                        'sheep', 'sofa', 'train', 'tvmonitor']
+                        'A', 'B', 'C', 'D',
+                        'E', 'F', 'G', 'H', 'I']
+
         self.num_classes = len(self.classes)
-        self.image_set_index = self.load_image_set_index()
+        self.image_set_index = self.simple_labels['file_name'].str.replace('.jpg', '').unique()
         self.num_images = len(self.image_set_index)
         print('num_images', self.num_images)
 
@@ -59,16 +60,6 @@ class PascalVOC(IMDB):
                        'use_diff': False,
                        'min_size': 2}
 
-    def load_image_set_index(self):
-        """
-        find out which indexes correspond to given image set (train or val)
-        :return:
-        """
-        image_set_index_file = os.path.join(self.data_path, 'ImageSets', 'Main', self.image_set + '.txt')
-        assert os.path.exists(image_set_index_file), 'Path does not exist: {}'.format(image_set_index_file)
-        with open(image_set_index_file) as f:
-            image_set_index = [x.strip() for x in f.readlines()]
-        return image_set_index
 
     def image_path_from_index(self, index):
         """
@@ -76,7 +67,8 @@ class PascalVOC(IMDB):
         :param index: index of a specific image
         :return: full path of this image
         """
-        image_file = os.path.join(self.data_path, 'JPEGImages', index + '.jpg')
+        # image_file = os.path.join(self.data_path, 'JPEGImages', index + '.jpg')
+        image_file = os.path.join(self.data_path, index)
         assert os.path.exists(image_file), 'Path does not exist: {}'.format(image_file)
         return image_file
 
@@ -92,7 +84,8 @@ class PascalVOC(IMDB):
             print('{} gt roidb loaded from {}'.format(self.name, cache_file))
             return roidb
 
-        gt_roidb = [self.load_pascal_annotation(index) for index in self.image_set_index]
+        gt_roidb = [self.load_pascal_annotation(index) for index in tqdm(self.image_set_index)]
+
         with open(cache_file, 'wb') as fid:
             pickle.dump(gt_roidb, fid, pickle.HIGHEST_PROTOCOL)
         print('wrote gt roidb to {}'.format(cache_file))
@@ -101,24 +94,29 @@ class PascalVOC(IMDB):
 
     def load_pascal_annotation(self, index):
         """
-        for a given index, load image and bounding boxes info from XML file
+        for a given index, load image and bounding boxes info from pandas simple_labels
         :param index: index of a specific image
         :return: record['boxes', 'gt_classes', 'gt_overlaps', 'flipped']
         """
-        import xml.etree.ElementTree as ET
         roi_rec = dict()
-        roi_rec['image'] = self.image_path_from_index(index)
-        size = cv2.imread(roi_rec['image']).shape
-        roi_rec['height'] = size[0]
-        roi_rec['width'] = size[1]
 
-        filename = os.path.join(self.data_path, 'Annotations', index + '.xml')
-        tree = ET.parse(filename)
-        objs = tree.findall('object')
-        if not self.config['use_diff']:
-            non_diff_objs = [obj for obj in objs if int(obj.find('difficult').text) == 0]
-            objs = non_diff_objs
-        num_objs = len(objs)
+        file_name = self.simple_labels.loc[self.simple_labels['file_name'].str.contains(index), 'file_name'].values[0]
+        roi_rec['image'] = os.path.join(self.data_path, file_name)
+
+        if self.image_set == 'dstl_test_1000':
+            roi_rec['height'] = 1000
+            roi_rec['width'] = 1000
+        elif self.image_set == 'dstl_test_2000':
+            roi_rec['height'] = 2000
+            roi_rec['width'] = 2000
+
+        else:
+            roi_rec['height'] = 700
+            roi_rec['width'] = 700
+
+        df_c = self.simple_labels[self.simple_labels['file_name'] == file_name].reset_index()
+
+        num_objs = df_c.shape[0]
 
         boxes = np.zeros((num_objs, 4), dtype=np.uint16)
         gt_classes = np.zeros((num_objs), dtype=np.int32)
@@ -126,14 +124,24 @@ class PascalVOC(IMDB):
 
         class_to_index = dict(list(zip(self.classes, list(range(self.num_classes)))))
         # Load object bounding boxes into a data frame.
-        for ix, obj in enumerate(objs):
-            bbox = obj.find('bndbox')
-            # Make pixel indexes 0-based
-            x1 = float(bbox.find('xmin').text) - 1
-            y1 = float(bbox.find('ymin').text) - 1
-            x2 = float(bbox.find('xmax').text) - 1
-            y2 = float(bbox.find('ymax').text) - 1
-            cls = class_to_index[obj.find('name').text.lower().strip()]
+
+        for ix in df_c.index:
+            if self.image_set.find('test') != -1 or self.image_set == 'dstl_train_2000':
+                x1 = 0
+                y1 = 0
+                x2 = 0
+                y2 = 0
+                class_name = '__background__'
+            else:
+                # Make pixel indexes 0-based
+                x1 = float(df_c.loc[ix, 'x_min'])
+                y1 = float(df_c.loc[ix, 'y_min'])
+                x2 = float(df_c.loc[ix, 'x_max'])
+                y2 = float(df_c.loc[ix, 'y_max'])
+                class_name = df_c.loc[ix, 'class_name']
+
+            cls = class_to_index[class_name]
+
             boxes[ix, :] = [x1, y1, x2, y2]
             gt_classes[ix] = cls
             overlaps[ix, cls] = 1.0
@@ -158,7 +166,7 @@ class PascalVOC(IMDB):
         raw_data = scipy.io.loadmat(matfile)['boxes'].ravel()  # original was dict ['images', 'boxes']
 
         box_list = []
-        for i in range(raw_data.shape[0]):
+        for i in tqdm(list(range(raw_data.shape[0]))):
             boxes = raw_data[i][:, (1, 0, 3, 2)] - 1  # pascal voc dataset starts from 1.
             keep = unique_boxes(boxes)
             boxes = boxes[keep, :]
@@ -194,6 +202,18 @@ class PascalVOC(IMDB):
 
         return roidb
 
+    def get_result_file_template(self):
+        """
+        this is a template
+        VOCdevkit/results/VOC2007/Main/<comp_id>_det_test_aeroplane.txt
+        :return: a string template
+        """
+        res_file_folder = os.path.join(self.devkit_path, 'results')
+        comp_id = self.config['comp_id']
+        filename = comp_id + '_det_' + self.image_set + '_{:s}.txt'
+        path = os.path.join(res_file_folder, filename)
+        return path
+
     def evaluate_detections(self, detections):
         """
         top level evaluations
@@ -204,27 +224,15 @@ class PascalVOC(IMDB):
         result_dir = os.path.join(self.devkit_path, 'results')
         if not os.path.exists(result_dir):
             os.mkdir(result_dir)
-        year_folder = os.path.join(self.devkit_path, 'results', 'VOC' + self.year)
+        year_folder = os.path.join(self.devkit_path, 'results', 'dstl')
         if not os.path.exists(year_folder):
             os.mkdir(year_folder)
-        res_file_folder = os.path.join(self.devkit_path, 'results', 'VOC' + self.year, 'Main')
+        res_file_folder = os.path.join(self.devkit_path, 'results', 'dstl', 'Main')
         if not os.path.exists(res_file_folder):
             os.mkdir(res_file_folder)
 
         self.write_pascal_results(detections)
         self.do_python_eval()
-
-    def get_result_file_template(self):
-        """
-        this is a template
-        VOCdevkit/results/VOC2007/Main/<comp_id>_det_test_aeroplane.txt
-        :return: a string template
-        """
-        res_file_folder = os.path.join(self.devkit_path, 'results', 'VOC' + self.year, 'Main')
-        comp_id = self.config['comp_id']
-        filename = comp_id + '_det_' + self.image_set + '_{:s}.txt'
-        path = os.path.join(res_file_folder, filename)
-        return path
 
     def write_pascal_results(self, all_boxes):
         """
@@ -235,7 +243,7 @@ class PascalVOC(IMDB):
         for cls_ind, cls in enumerate(self.classes):
             if cls == '__background__':
                 continue
-            print('Writing {} VOC results file'.format(cls))
+            print('Writing {} DSTL results file'.format(cls))
             filename = self.get_result_file_template().format(cls)
             with open(filename, 'wt') as f:
                 for im_ind, index in enumerate(self.image_set_index):
@@ -253,19 +261,20 @@ class PascalVOC(IMDB):
         python evaluation wrapper
         :return: None
         """
-        annopath = os.path.join(self.data_path, 'Annotations', '{0!s}.xml')
-        imageset_file = os.path.join(self.data_path, 'ImageSets', 'Main', self.image_set + '.txt')
-        annocache = os.path.join(self.cache_path, self.name + '_annotations.pkl')
-        aps = []
-        # The PASCAL VOC metric changed in 2010
-        use_07_metric = True if int(self.year) < 2010 else False
-        print('VOC07 metric? ' + ('Y' if use_07_metric else 'No'))
-        for cls_ind, cls in enumerate(self.classes):
-            if cls == '__background__':
-                continue
-            filename = self.get_result_file_template().format(cls)
-            rec, prec, ap = voc_eval(filename, annopath, imageset_file, cls, annocache,
-                                     ovthresh=0.5, use_07_metric=use_07_metric)
-            aps += [ap]
-            print('AP for {} = {:.4f}'.format(cls, ap))
-        print('Mean AP = {:.4f}'.format(np.mean(aps)))
+        # annopath = os.path.join(self.data_path, 'Annotations', '{0!s}.xml')
+        # imageset_file = os.path.join(self.data_path, 'ImageSets', 'Main', self.image_set + '.txt')
+        # annocache = os.path.join(self.cache_path, self.name + '_annotations.pkl')
+        # aps = []
+        # # The PASCAL VOC metric changed in 2010
+        # use_07_metric = True if int(self.year) < 2010 else False
+        # print('VOC07 metric? ' + ('Y' if use_07_metric else 'No'))
+        # for cls_ind, cls in enumerate(self.classes):
+        #     if cls == '__background__':
+        #         continue
+        #     filename = self.get_result_file_template().format(cls)
+        #     rec, prec, ap = voc_eval(filename, annopath, imageset_file, cls, annocache,
+        #                              ovthresh=0.5, use_07_metric=use_07_metric)
+        #     aps += [ap]
+        #     print('AP for {} = {:.4f}'.format(cls, ap))
+        # print('Mean AP = {:.4f}'.format(np.mean(aps)))
+        print("Python Eval")

@@ -1,6 +1,13 @@
+from __future__ import division
+from __future__ import absolute_import
+from __future__ import unicode_literals
+from __future__ import print_function
+from future import standard_library
+standard_library.install_aliases()
+from past.utils import old_div
 import mxnet as mx
-import proposal
-import proposal_target
+from . import proposal
+from . import proposal_target
 from rcnn.config import config
 
 
@@ -89,7 +96,7 @@ def get_vgg_rcnn(num_classes=config.NUM_CLASSES):
 
     # Fast R-CNN
     pool5 = mx.symbol.ROIPooling(
-        name='roi_pool5', data=relu5_3, rois=rois, pooled_size=(7, 7), spatial_scale=1.0 / config.RCNN_FEAT_STRIDE)
+        name='roi_pool5', data=relu5_3, rois=rois, pooled_size=(7, 7), spatial_scale=old_div(1.0, config.RCNN_FEAT_STRIDE))
     # group 6
     flatten = mx.symbol.Flatten(data=pool5, name="flatten")
     fc6 = mx.symbol.FullyConnected(data=flatten, num_hidden=4096, name="fc6")
@@ -105,7 +112,7 @@ def get_vgg_rcnn(num_classes=config.NUM_CLASSES):
     # bounding box regression
     bbox_pred = mx.symbol.FullyConnected(name='bbox_pred', data=drop7, num_hidden=num_classes * 4)
     bbox_loss_ = bbox_weight * mx.symbol.smooth_l1(name='bbox_loss_', scalar=1.0, data=(bbox_pred - bbox_target))
-    bbox_loss = mx.sym.MakeLoss(name='bbox_loss', data=bbox_loss_, grad_scale=1.0 / config.TRAIN.BATCH_ROIS)
+    bbox_loss = mx.sym.MakeLoss(name='bbox_loss', data=bbox_loss_, grad_scale=old_div(1.0, config.TRAIN.BATCH_ROIS))
 
     # reshape output
     cls_prob = mx.symbol.Reshape(data=cls_prob, shape=(config.TRAIN.BATCH_IMAGES, -1, num_classes), name='cls_prob_reshape')
@@ -133,7 +140,7 @@ def get_vgg_rcnn_test(num_classes=config.NUM_CLASSES):
     
     # Fast R-CNN
     pool5 = mx.symbol.ROIPooling(
-        name='roi_pool5', data=relu5_3, rois=rois, pooled_size=(7, 7), spatial_scale=1.0 / config.RCNN_FEAT_STRIDE)
+        name='roi_pool5', data=relu5_3, rois=rois, pooled_size=(7, 7), spatial_scale=old_div(1.0, config.RCNN_FEAT_STRIDE))
     # group 6
     flatten = mx.symbol.Flatten(data=pool5, name="flatten")
     fc6 = mx.symbol.FullyConnected(data=flatten, num_hidden=4096, name="fc6")
@@ -190,7 +197,7 @@ def get_vgg_rpn(num_anchors=config.NUM_ANCHORS):
                                        normalization='valid', use_ignore=True, ignore_label=-1, name="cls_prob")
     # bounding box regression
     bbox_loss_ = bbox_weight * mx.symbol.smooth_l1(name='bbox_loss_', scalar=3.0, data=(rpn_bbox_pred - bbox_target))
-    bbox_loss = mx.sym.MakeLoss(name='bbox_loss', data=bbox_loss_, grad_scale=1.0 / config.TRAIN.RPN_BATCH_SIZE)
+    bbox_loss = mx.sym.MakeLoss(name='bbox_loss', data=bbox_loss_, grad_scale=old_div(1.0, config.TRAIN.RPN_BATCH_SIZE))
     # group output
     group = mx.symbol.Group([cls_prob, bbox_loss])
     return group
@@ -288,7 +295,7 @@ def get_vgg_test(num_classes=config.NUM_CLASSES, num_anchors=config.NUM_ANCHORS)
 
     # Fast R-CNN
     pool5 = mx.symbol.ROIPooling(
-        name='roi_pool5', data=relu5_3, rois=rois, pooled_size=(7, 7), spatial_scale=1.0 / config.RCNN_FEAT_STRIDE)
+        name='roi_pool5', data=relu5_3, rois=rois, pooled_size=(7, 7), spatial_scale=old_div(1.0, config.RCNN_FEAT_STRIDE))
     # group 6
     flatten = mx.symbol.Flatten(data=pool5, name="flatten")
     fc6 = mx.symbol.FullyConnected(data=flatten, num_hidden=4096, name="fc6")
@@ -348,7 +355,7 @@ def get_vgg_train(num_classes=config.NUM_CLASSES, num_anchors=config.NUM_ANCHORS
                                            normalization='valid', use_ignore=True, ignore_label=-1, name="rpn_cls_prob")
     # bounding box regression
     rpn_bbox_loss_ = rpn_bbox_weight * mx.symbol.smooth_l1(name='rpn_bbox_loss_', scalar=3.0, data=(rpn_bbox_pred - rpn_bbox_target))
-    rpn_bbox_loss = mx.sym.MakeLoss(name='rpn_bbox_loss', data=rpn_bbox_loss_, grad_scale=1.0 / config.TRAIN.RPN_BATCH_SIZE)
+    rpn_bbox_loss = mx.sym.MakeLoss(name='rpn_bbox_loss', data=rpn_bbox_loss_, grad_scale=old_div(1.0, config.TRAIN.RPN_BATCH_SIZE))
 
     # ROI proposal
     rpn_cls_act = mx.symbol.SoftmaxActivation(
@@ -381,7 +388,7 @@ def get_vgg_train(num_classes=config.NUM_CLASSES, num_anchors=config.NUM_ANCHORS
 
     # Fast R-CNN
     pool5 = mx.symbol.ROIPooling(
-        name='roi_pool5', data=relu5_3, rois=rois, pooled_size=(7, 7), spatial_scale=1.0 / config.RCNN_FEAT_STRIDE)
+        name='roi_pool5', data=relu5_3, rois=rois, pooled_size=(7, 7), spatial_scale=old_div(1.0, config.RCNN_FEAT_STRIDE))
     # group 6
     flatten = mx.symbol.Flatten(data=pool5, name="flatten")
     fc6 = mx.symbol.FullyConnected(data=flatten, num_hidden=4096, name="fc6")
@@ -397,7 +404,7 @@ def get_vgg_train(num_classes=config.NUM_CLASSES, num_anchors=config.NUM_ANCHORS
     # bounding box regression
     bbox_pred = mx.symbol.FullyConnected(name='bbox_pred', data=drop7, num_hidden=num_classes * 4)
     bbox_loss_ = bbox_weight * mx.symbol.smooth_l1(name='bbox_loss_', scalar=1.0, data=(bbox_pred - bbox_target))
-    bbox_loss = mx.sym.MakeLoss(name='bbox_loss', data=bbox_loss_, grad_scale=1.0 / config.TRAIN.BATCH_ROIS)
+    bbox_loss = mx.sym.MakeLoss(name='bbox_loss', data=bbox_loss_, grad_scale=old_div(1.0, config.TRAIN.BATCH_ROIS))
 
     # reshape output
     label = mx.symbol.Reshape(data=label, shape=(config.TRAIN.BATCH_IMAGES, -1), name='label_reshape')

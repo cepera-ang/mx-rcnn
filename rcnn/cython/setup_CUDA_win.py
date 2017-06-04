@@ -1,5 +1,11 @@
 #!/usr/bin/env python  
   
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
 import numpy as np  
 import os  
 # on Windows, we need the original PATH without Anaconda's compiler in it:  
@@ -11,7 +17,7 @@ import sys
   
 # CUDA specific config  
 # nvcc is assumed to be in user's PATH  
-nvcc_compile_args = ['-O', '--ptxas-options=-v', '-arch=sm_35', '-c', '--compiler-options=-fPIC']  
+nvcc_compile_args = ['-O', '--ptxas-options=-v', '-arch=sm_60', '-c', '--compiler-options=-fPIC']
 nvcc_compile_args = os.environ.get('NVCCFLAGS', '').split() + nvcc_compile_args  
 cuda_libs = ['cublas']  
   
@@ -52,70 +58,82 @@ class CUDA_build_ext(build_ext):
         Perform any CUDA specific customizations before actually launching 
         compile/link etc. commands. 
         """  
-        if (sys.platform == 'darwin' and len(cmd) >= 2 and cmd[0] == 'nvcc' and  
-                cmd[1] == '--shared' and cmd.count('-arch') > 0):  
-            # Versions of distutils on OSX earlier than 2.7.9 inject  
-            # '-arch x86_64' which we need to strip while using nvcc for  
-            # linking  
-            while True:  
-                try:  
-                    index = cmd.index('-arch')  
-                    del cmd[index:index+2]  
-                except ValueError:  
-                    break  
-        elif self.compiler.compiler_type == 'msvc':  
-            # There are several things we need to do to change the commands  
-            # issued by MSVCCompiler into one that works with nvcc. In the end,  
-            # it might have been easier to write our own CCompiler class for  
-            # nvcc, as we're only interested in creating a shared library to  
-            # load with ctypes, not in creating an importable Python extension.  
-            # - First, we replace the cl.exe or link.exe call with an nvcc  
-            #   call. In case we're running Anaconda, we search cl.exe in the  
-            #   original search path we captured further above -- Anaconda  
-            #   inserts a MSVC version into PATH that is too old for nvcc.  
-            
-            cmd[:1] = ['nvcc', '--compiler-bindir',r'D:\Microsoft Visual Studio 14.0\VC\bin\cl.exe'  
-                        ]  
-            # - Secondly, we fix a bunch of command line arguments.  
-            for idx, c in enumerate(cmd):  
-                # create .dll instead of .pyd files  
-                #if '.pyd' in c: cmd[idx] = c = c.replace('.pyd', '.dll')  #20160601, by MrX  
-                # replace /c by -c  
-                if c == '/c': cmd[idx] = '-c'  
-                # replace /DLL by --shared  
-                elif c == '/DLL': cmd[idx] = '--shared'  
-                # remove --compiler-options=-fPIC  
-                elif '-fPIC' in c: del cmd[idx]  
-                # replace /Tc... by ...  
-                elif c.startswith('/Tc'): cmd[idx] = c[3:]  
-                # replace /Fo... by -o ...  
-                elif c.startswith('/Fo'): cmd[idx:idx+1] = ['-o', c[3:]]  
-                # replace /LIBPATH:... by -L...  
-                elif c.startswith('/LIBPATH:'): cmd[idx] = '-L' + c[9:]  
-                # replace /OUT:... by -o ...  
-                elif c.startswith('/OUT:'): cmd[idx:idx+1] = ['-o', c[5:]]  
-                # remove /EXPORT:initlibcudamat or /EXPORT:initlibcudalearn  
-                elif c.startswith('/EXPORT:'): del cmd[idx]  
-                # replace cublas.lib by -lcublas  
-                elif c == 'cublas.lib': cmd[idx] = '-lcublas'  
-            # - Finally, we pass on all arguments starting with a '/' to the  
-            #   compiler or linker, and have nvcc handle all other arguments  
-            if '--shared' in cmd:  
-                pass_on = '--linker-options='  
-                # we only need MSVCRT for a .dll, remove CMT if it sneaks in:  
-                cmd.append('/NODEFAULTLIB:libcmt.lib')  
-            else:  
-                pass_on = '--compiler-options='  
-            cmd = ([c for c in cmd if c[0] != '/'] +  
-                   [pass_on + ','.join(c for c in cmd if c[0] == '/')])  
-            # For the future: Apart from the wrongly set PATH by Anaconda, it  
-            # would suffice to run the following for compilation on Windows:  
-            # nvcc -c -O -o <file>.obj <file>.cu  
-            # And the following for linking:  
-            # nvcc --shared -o <file>.dll <file1>.obj <file2>.obj -lcublas  
-            # This could be done by a NVCCCompiler class for all platforms.  
-        spawn(cmd, search_path, verbose, dry_run)  
-  
+#         if (sys.platform == 'darwin' and len(cmd) >= 2 and cmd[0] == 'nvcc' and
+#                 cmd[1] == '--shared' and cmd.count('-arch') > 0):
+#             # Versions of distutils on OSX earlier than 2.7.9 inject
+#             # '-arch x86_64' which we need to strip while using nvcc for
+#             # linking
+#             while True:
+#                 try:
+#                     index = cmd.index('-arch')
+#                     del cmd[index:index+2]
+#                 except ValueError:
+#                     break
+#         elif self.compiler.compiler_type == 'msvc':
+#             # There are several things we need to do to change the commands
+#             # issued by MSVCCompiler into one that works with nvcc. In the end,
+#             # it might have been easier to write our own CCompiler class for
+#             # nvcc, as we're only interested in creating a shared library to
+#             # load with ctypes, not in creating an importable Python extension.
+#             # - First, we replace the cl.exe or link.exe call with an nvcc
+#             #   call. In case we're running Anaconda, we search cl.exe in the
+#             #   original search path we captured further above -- Anaconda
+#             #   inserts a MSVC version into PATH that is too old for nvcc.
+#
+#             # cmd[:1] = ['nvcc', '--compiler-bindir',r'C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\bin\\amd64\\cl.exe'
+#             #             ]
+#             cmd[:1] = ['nvcc']
+#             # - Secondly, we fix a bunch of command line arguments.
+#             for idx, c in enumerate(cmd):
+#                 # create .dll instead of .pyd files
+#                 #if '.pyd' in c: cmd[idx] = c = c.replace('.pyd', '.dll')  #20160601, by MrX
+#                 # replace /c by -c
+#                 if c == '/c': cmd[idx] = '-c'
+#                 # replace /DLL by --shared
+#                 elif c == '/DLL': cmd[idx] = '--shared'
+#                 # remove --compiler-options=-fPIC
+#                 elif '-fPIC' in c: del cmd[idx]
+#                 # replace /Tc... by ...
+#                 elif c.startswith('/Tc'): cmd[idx] = c[3:]
+#                 # replace /Fo... by -o ...
+#                 elif c.startswith('/Fo'): cmd[idx:idx+1] = ['-o', c[3:]]
+#                 # replace /LIBPATH:... by -L...
+#                 elif c.startswith('/LIBPATH:'): cmd[idx] = '-L' + c[9:]
+#                 # replace /OUT:... by -o ...
+#                 elif c.startswith('/OUT:'): cmd[idx:idx+1] = ['-o', c[5:]]
+#                 # remove /EXPORT:initlibcudamat or /EXPORT:initlibcudalearn
+#                 elif c.startswith('/EXPORT:'): del cmd[idx]
+#                 # replace cublas.lib by -lcublas
+#                 elif c == 'cublas.lib': cmd[idx] = '-lcublas'
+#             # - Finally, we pass on all arguments starting with a '/' to the
+#             #   compiler or linker, and have nvcc handle all other arguments
+#             if '--shared' in cmd:
+#                 cmd = ['nvcc', '--shared',
+#                        r'-L"C:\Anaconda3\libs"',
+#                        r'-o build\temp.win-amd64-3.5\Release\gpu_nms.dll build\temp.win-amd64-3.5\Release\gpu_nms.obj',
+#                        '-lcublas'
+# ]
+#                 # pass_on = '--linker-options='
+#                 # # we only need MSVCRT for a .dll, remove CMT if it sneaks in:
+#                 cmd.append('/NODEFAULTLIB:libcmt.lib')
+#             else:
+#                 pass_on = '--compiler-options='
+#             cmd = ([c for c in cmd if c[0] != '/'] +
+#                    [pass_on + ','.join(c for c in cmd if c[0] == '/')])
+#             # For the future: Apart from the wrongly set PATH by Anaconda, it
+#             # would suffice to run the following for compilation on Windows:
+#             # nvcc -c -O -o <file>.obj <file>.cu
+#             # And the following for linking:
+#             # nvcc --shared -o <file>.dll <file1>.obj <file2>.obj -lcublas
+#             # This could be done by a NVCCCompiler class for all platforms.
+#             #
+#             # nvcc -c -O -o build\temp.win-amd64-3.5\Release\gpu_nms.obj gpu_nms.cu -I"C:\Anaconda3\include" -I"C:\Anaconda3\lib\site-packages\numpy\core\include"
+#             # nvcc --shared -L"C:\Anaconda3\libs" -o build\temp.win-amd64-3.5\Release\gpu_nms.dll build\temp.win-amd64-3.5\Release\gpu_nms.obj -lcublas
+        if cmd[1] == '-c':
+            spawn(['nvcc', r'-c -O -o build\temp.win-amd64-3.5\Release\gpu_nms.obj gpu_nms.cu -I"C:\Anaconda3\include" -I"C:\Anaconda3\lib\site-packages\numpy\core\include"'], search_path, verbose, dry_run)
+        else:
+            spawn(['nvcc', r'nvcc --shared -L"C:\Anaconda3\libs" -o build\temp.win-amd64-3.5\Release\gpu_nms.dll build\temp.win-amd64-3.5\Release\gpu_nms.obj -lcublas'], search_path, verbose, dry_run)
+
 setup(name="py_fast_rcnn_gpu",  
       description="Performs linear algebra computation on the GPU via CUDA",  
       ext_modules=[cudamat_ext],  

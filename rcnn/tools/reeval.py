@@ -1,9 +1,15 @@
+from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from builtins import open
+from future import standard_library
+standard_library.install_aliases()
 import argparse
-import cPickle
+import pickle
 import os
 import mxnet as mx
 
-from ..logger import logger
 from ..config import config, default, generate_config
 from ..dataset import *
 
@@ -15,7 +21,7 @@ def reeval(args):
     # load detection results
     cache_file = os.path.join(imdb.cache_path, imdb.name, 'detections.pkl')
     with open(cache_file) as f:
-        detections = cPickle.load(f)
+        detections = pickle.load(f)
 
     # eval
     imdb.evaluate_detections(detections)
@@ -39,7 +45,7 @@ def parse_args():
 
 def main():
     args = parse_args()
-    logger.info('Called with argument: %s' % args)
+    print('Called with argument:', args)
     reeval(args)
 
 

@@ -8,10 +8,21 @@ basic format [image_index]
 ['image', 'height', 'width', 'flipped',
 'boxes', 'gt_classes', 'gt_overlaps', 'max_classes', 'max_overlaps', 'bbox_targets']
 """
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import absolute_import
 
-from ..logger import logger
+from builtins import open
+from builtins import dict
+from future import standard_library
+standard_library.install_aliases()
+from builtins import zip
+from builtins import range
+from builtins import object
+from past.utils import old_div
 import os
-import cPickle
+import pickle
 import numpy as np
 from ..processing.bbox_transform import bbox_overlaps
 
@@ -70,10 +81,10 @@ class IMDB(object):
             rpn_file = os.path.join(self.root_path, 'rpn_data', self.name + '_full_rpn.pkl')
         else:
             rpn_file = os.path.join(self.root_path, 'rpn_data', self.name + '_rpn.pkl')
-        assert os.path.exists(rpn_file), '%s rpn data not found at %s' % (self.name, rpn_file)
-        logger.info('%s loading rpn data from %s' % (self.name, rpn_file))
+        print('loading {}'.format(rpn_file))
+        assert os.path.exists(rpn_file), 'rpn data not found at {}'.format(rpn_file)
         with open(rpn_file, 'rb') as f:
-            box_list = cPickle.load(f)
+            box_list = pickle.load(f)
         return box_list
 
     def load_rpn_roidb(self, gt_roidb):
@@ -93,7 +104,7 @@ class IMDB(object):
         :return: roidb of rpn
         """
         if append_gt:
-            logger.info('%s appending ground truth annotations' % self.name)
+            print('appending ground truth annotations')
             rpn_roidb = self.load_rpn_roidb(gt_roidb)
             roidb = IMDB.merge_roidbs(gt_roidb, rpn_roidb)
         else:
@@ -156,7 +167,7 @@ class IMDB(object):
         :param roidb: [image_index]['boxes', 'gt_classes', 'gt_overlaps', 'flipped']
         :return: roidb: [image_index]['boxes', 'gt_classes', 'gt_overlaps', 'flipped']
         """
-        logger.info('%s append flipped images to roidb' % self.name)
+        print('append flipped images to roidb')
         assert self.num_images == len(roidb)
         for i in range(self.num_images):
             roi_rec = roidb[i]
@@ -165,6 +176,7 @@ class IMDB(object):
             oldx2 = boxes[:, 2].copy()
             boxes[:, 0] = roi_rec['width'] - oldx2 - 1
             boxes[:, 2] = roi_rec['width'] - oldx1 - 1
+            # print('boxes 0, 2, roi_rec_width', boxes[:, 0], boxes[:, 2], roi_rec['width'], oldx1, oldx2)
             assert (boxes[:, 2] >= boxes[:, 0]).all()
             entry = {'image': roi_rec['image'],
                      'height': roi_rec['height'],
@@ -211,8 +223,8 @@ class IMDB(object):
             area_counts.append(area_count)
         total_counts = float(sum(area_counts))
         for area_name, area_count in zip(area_names[1:], area_counts):
-            logger.info('percentage of %s is %f' % (area_name, area_count / total_counts))
-        logger.info('average number of proposal is %f' % (total_counts / self.num_images))
+            print('percentage of', area_name, old_div(area_count, total_counts))
+        print('average number of proposal', old_div(total_counts, self.num_images))
         for area_name, area_range in zip(area_names, area_ranges):
             gt_overlaps = np.zeros(0)
             num_pos = 0
@@ -268,7 +280,7 @@ class IMDB(object):
 
             # compute recall for each IoU threshold
             for i, t in enumerate(thresholds):
-                recalls[i] = (gt_overlaps >= t).sum() / float(num_pos)
+                recalls[i] = old_div((gt_overlaps >= t).sum(), float(num_pos))
             ar = recalls.mean()
 
             # print results

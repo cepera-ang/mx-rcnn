@@ -1,3 +1,11 @@
+from __future__ import division
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import absolute_import
+from builtins import super
+from future import standard_library
+standard_library.install_aliases()
+from past.utils import old_div
 import mxnet as mx
 import numpy as np
 
@@ -128,7 +136,7 @@ class RPNL1LossMetric(mx.metric.EvalMetric):
         bbox_weight = labels[self.label.index('rpn_bbox_weight')].asnumpy()
 
         # calculate num_inst (average on those fg anchors)
-        num_inst = np.sum(bbox_weight > 0) / 4
+        num_inst = old_div(np.sum(bbox_weight > 0), 4)
 
         self.sum_metric += np.sum(bbox_loss)
         self.num_inst += num_inst

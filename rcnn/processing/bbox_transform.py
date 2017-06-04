@@ -1,5 +1,13 @@
+from __future__ import division
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import range
+from past.utils import old_div
 import numpy as np
-from ..cython.bbox import bbox_overlaps_cython
+from rcnn.cython.bbox import bbox_overlaps_cython
 
 
 def bbox_overlaps(boxes, query_boxes):
@@ -66,10 +74,10 @@ def nonlinear_transform(ex_rois, gt_rois):
     gt_ctr_x = gt_rois[:, 0] + 0.5 * (gt_widths - 1.0)
     gt_ctr_y = gt_rois[:, 1] + 0.5 * (gt_heights - 1.0)
 
-    targets_dx = (gt_ctr_x - ex_ctr_x) / (ex_widths + 1e-14)
-    targets_dy = (gt_ctr_y - ex_ctr_y) / (ex_heights + 1e-14)
-    targets_dw = np.log(gt_widths / ex_widths)
-    targets_dh = np.log(gt_heights / ex_heights)
+    targets_dx = old_div((gt_ctr_x - ex_ctr_x), (ex_widths + 1e-14))
+    targets_dy = old_div((gt_ctr_y - ex_ctr_y), (ex_heights + 1e-14))
+    targets_dw = np.log(old_div(gt_widths, ex_widths))
+    targets_dh = np.log(old_div(gt_heights, ex_heights))
 
     targets = np.vstack(
         (targets_dx, targets_dy, targets_dw, targets_dh)).transpose()

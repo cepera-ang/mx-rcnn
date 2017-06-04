@@ -1,5 +1,10 @@
+from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
 import numpy as np
-from ..logger import logger
 from ..config import config
 from ..dataset import *
 
@@ -47,6 +52,6 @@ def filter_roidb(roidb):
     num = len(roidb)
     filtered_roidb = [entry for entry in roidb if is_valid(entry)]
     num_after = len(filtered_roidb)
-    logger.info('load data: filtered %d roidb entries: %d -> %d' % (num - num_after, num, num_after))
+    print('filtered %d roidb entries: %d -> %d' % (num - num_after, num, num_after))
 
     return filtered_roidb

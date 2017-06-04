@@ -1,7 +1,15 @@
+from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from builtins import int
+from future import standard_library
+standard_library.install_aliases()
 import argparse
+import logging
+
 import mxnet as mx
 
-from rcnn.logger import logger
 from rcnn.config import config, default, generate_config
 from rcnn.tools.train_rpn import train_rpn
 from rcnn.tools.test_rpn import test_rpn
@@ -12,36 +20,41 @@ from rcnn.utils.combine_model import combine_model
 def alternate_train(args, ctx, pretrained, epoch,
                     rpn_epoch, rpn_lr, rpn_lr_step,
                     rcnn_epoch, rcnn_lr, rcnn_lr_step):
+    # set up logger
+    logging.basicConfig()
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+
     # basic config
     begin_epoch = 0
     config.TRAIN.BG_THRESH_LO = 0.0
 
-    logger.info('########## TRAIN RPN WITH IMAGENET INIT')
+    logging.info('########## TRAIN RPN WITH IMAGENET INIT')
     train_rpn(args.network, args.dataset, args.image_set, args.root_path, args.dataset_path,
               args.frequent, args.kvstore, args.work_load_list, args.no_flip, args.no_shuffle, args.resume,
               ctx, pretrained, epoch, 'model/rpn1', begin_epoch, rpn_epoch,
               train_shared=False, lr=rpn_lr, lr_step=rpn_lr_step)
 
-    logger.info('########## GENERATE RPN DETECTION')
+    logging.info('########## GENERATE RPN DETECTION')
     image_sets = [iset for iset in args.image_set.split('+')]
     for image_set in image_sets:
         test_rpn(args.network, args.dataset, image_set, args.root_path, args.dataset_path,
                  ctx[0], 'model/rpn1', rpn_epoch,
                  vis=False, shuffle=False, thresh=0)
 
-    logger.info('########## TRAIN RCNN WITH IMAGENET INIT AND RPN DETECTION')
+    logging.info('########## TRAIN RCNN WITH IMAGENET INIT AND RPN DETECTION')
     train_rcnn(args.network, args.dataset, args.image_set, args.root_path, args.dataset_path,
                args.frequent, args.kvstore, args.work_load_list, args.no_flip, args.no_shuffle, args.resume,
                ctx, pretrained, epoch, 'model/rcnn1', begin_epoch, rcnn_epoch,
                train_shared=False, lr=rcnn_lr, lr_step=rcnn_lr_step, proposal='rpn')
 
-    logger.info('########## TRAIN RPN WITH RCNN INIT')
+    logging.info('########## TRAIN RPN WITH RCNN INIT')
     train_rpn(args.network, args.dataset, args.image_set, args.root_path, args.dataset_path,
               args.frequent, args.kvstore, args.work_load_list, args.no_flip, args.no_shuffle, args.resume,
               ctx, 'model/rcnn1', rcnn_epoch, 'model/rpn2', begin_epoch, rpn_epoch,
               train_shared=True, lr=rpn_lr, lr_step=rpn_lr_step)
 
-    logger.info('########## GENERATE RPN DETECTION')
+    logging.info('########## GENERATE RPN DETECTION')
     image_sets = [iset for iset in args.image_set.split('+')]
     for image_set in image_sets:
         test_rpn(args.network, args.dataset, image_set, args.root_path, args.dataset_path,
@@ -94,7 +107,7 @@ def parse_args():
 
 def main():
     args = parse_args()
-    logger.info('Called with argument: %s' % args)
+    print('Called with argument:', args)
     ctx = [mx.gpu(int(i)) for i in args.gpus.split(',')]
     alternate_train(args, ctx, args.pretrained, args.pretrained_epoch,
                     args.rpn_epoch, args.rpn_lr, args.rpn_lr_step,

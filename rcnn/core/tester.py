@@ -1,11 +1,23 @@
-import cPickle
+from __future__ import division
+from __future__ import print_function
+from __future__ import absolute_import
+from __future__ import unicode_literals
+from builtins import open
+from builtins import dict
+from future import standard_library
+standard_library.install_aliases()
+from builtins import zip
+from builtins import map
+from builtins import range
+from past.utils import old_div
+from builtins import object
+import pickle
 import os
 import time
 import mxnet as mx
 import numpy as np
 
-from module import MutableModule
-from rcnn.logger import logger
+from .module import MutableModule
 from rcnn.config import config
 from rcnn.io import image
 from rcnn.processing.bbox_transform import bbox_pred, clip_boxes
@@ -24,11 +36,11 @@ class Predictor(object):
 
     def predict(self, data_batch):
         self._mod.forward(data_batch)
-        return dict(zip(self._mod.output_names, self._mod.get_outputs()))
+        return dict(list(zip(self._mod.output_names, self._mod.get_outputs())))
 
 
 def im_proposal(predictor, data_batch, data_names, scale):
-    data_dict = dict(zip(data_names, data_batch.data))
+    data_dict = dict(list(zip(data_names, data_batch.data)))
     output = predictor.predict(data_batch)
 
     # drop the batch index
@@ -36,7 +48,7 @@ def im_proposal(predictor, data_batch, data_names, scale):
     scores = output['rois_score'].asnumpy()
 
     # transform to original scale
-    boxes = boxes / scale
+    boxes = old_div(boxes, scale)
 
     return scores, boxes, data_dict
 
@@ -79,9 +91,8 @@ def generate_proposals(predictor, test_data, imdb, vis=False, thresh=0.):
         if vis:
             vis_all_detection(data_dict['data'].asnumpy(), [dets], ['obj'], scale)
 
-        logger.info('generating %d/%d ' % (i + 1, imdb.num_images) +
-                    'proposal %d ' % (dets.shape[0]) +
-                    'data %.4fs net %.4fs' % (t1, t2))
+        print('generating %d/%d' % (i + 1, imdb.num_images), 'proposal %d' % (dets.shape[0]), \
+            'data %.4fs net %.4fs' % (t1, t2))
         i += 1
 
     assert len(imdb_boxes) == imdb.num_images, 'calculations not complete'
@@ -93,21 +104,21 @@ def generate_proposals(predictor, test_data, imdb, vis=False, thresh=0.):
 
     rpn_file = os.path.join(rpn_folder, imdb.name + '_rpn.pkl')
     with open(rpn_file, 'wb') as f:
-        cPickle.dump(imdb_boxes, f, cPickle.HIGHEST_PROTOCOL)
+        pickle.dump(imdb_boxes, f, pickle.HIGHEST_PROTOCOL)
 
     if thresh > 0:
         full_rpn_file = os.path.join(rpn_folder, imdb.name + '_full_rpn.pkl')
         with open(full_rpn_file, 'wb') as f:
-            cPickle.dump(original_boxes, f, cPickle.HIGHEST_PROTOCOL)
+            pickle.dump(original_boxes, f, pickle.HIGHEST_PROTOCOL)
 
-    logger.info('wrote rpn proposals to %s' % rpn_file)
+    print('wrote rpn proposals to {}'.format(rpn_file))
     return imdb_boxes
 
 
 def im_detect(predictor, data_batch, data_names, scale):
     output = predictor.predict(data_batch)
 
-    data_dict = dict(zip(data_names, data_batch.data))
+    data_dict = dict(list(zip(data_names, data_batch.data)))
     if config.TEST.HAS_RPN:
         rois = output['rois_output'].asnumpy()[:, 1:]
     else:
@@ -123,7 +134,7 @@ def im_detect(predictor, data_batch, data_names, scale):
     pred_boxes = clip_boxes(pred_boxes, im_shape[-2:])
 
     # we used scaled image & roi to train, so it is necessary to transform them back
-    pred_boxes = pred_boxes / scale
+    pred_boxes = old_div(pred_boxes, scale)
 
     return scores, pred_boxes, data_dict
 
@@ -151,8 +162,8 @@ def pred_eval(predictor, test_data, imdb, vis=False, thresh=1e-3):
     # all detections are collected into:
     #    all_boxes[cls][image] = N x 5 array of detections in
     #    (x1, y1, x2, y2, score)
-    all_boxes = [[[] for _ in xrange(num_images)]
-                 for _ in xrange(imdb.num_classes)]
+    all_boxes = [[[] for _ in range(num_images)]
+                 for _ in range(imdb.num_classes)]
 
     i = 0
     t = time.time()
@@ -189,12 +200,12 @@ def pred_eval(predictor, test_data, imdb, vis=False, thresh=1e-3):
 
         t3 = time.time() - t
         t = time.time()
-        logger.info('testing %d/%d data %.4fs net %.4fs post %.4fs' % (i, imdb.num_images, t1, t2, t3))
+        print('testing {}/{} data {:.4f}s net {:.4f}s post {:.4f}s'.format(i, imdb.num_images, t1, t2, t3))
         i += 1
 
     det_file = os.path.join(imdb.cache_path, imdb.name + '_detections.pkl')
     with open(det_file, 'wb') as f:
-        cPickle.dump(all_boxes, f, protocol=cPickle.HIGHEST_PROTOCOL)
+        pickle.dump(all_boxes, f, protocol=pickle.HIGHEST_PROTOCOL)
 
     imdb.evaluate_detections(all_boxes)
 
@@ -254,7 +265,7 @@ def draw_all_detection(im_array, detections, class_names, scale):
         for det in dets:
             bbox = det[:4] * scale
             score = det[-1]
-            bbox = map(int, bbox)
+            bbox = list(map(int, bbox))
             cv2.rectangle(im, (bbox[0], bbox[1]), (bbox[2], bbox[3]), color=color, thickness=2)
             cv2.putText(im, '%s %.3f' % (class_names[j], score), (bbox[0], bbox[1] + 10),
                         color=color_white, fontFace=cv2.FONT_HERSHEY_COMPLEX, fontScale=0.5)

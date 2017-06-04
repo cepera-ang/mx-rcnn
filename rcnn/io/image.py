@@ -1,3 +1,12 @@
+from __future__ import division
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import absolute_import
+from builtins import int
+from future import standard_library
+standard_library.install_aliases()
+from builtins import range
+from past.utils import old_div
 import numpy as np
 import cv2
 import os
@@ -20,7 +29,7 @@ def get_image(roidb):
     processed_roidb = []
     for i in range(num_images):
         roi_rec = roidb[i]
-        assert os.path.exists(roi_rec['image']), '%s does not exist'.format(roi_rec['image'])
+        assert os.path.exists(roi_rec['image']), '{} does not exist'.format(roi_rec['image'])
         im = cv2.imread(roi_rec['image'])
         if roidb[i]['flipped']:
             im = im[:, ::-1, :]
@@ -50,18 +59,18 @@ def resize(im, target_size, max_size, stride=0):
     im_shape = im.shape
     im_size_min = np.min(im_shape[0:2])
     im_size_max = np.max(im_shape[0:2])
-    im_scale = float(target_size) / float(im_size_min)
+    im_scale = old_div(float(target_size), float(im_size_min))
     # prevent bigger axis from being more than max_size:
     if np.round(im_scale * im_size_max) > max_size:
-        im_scale = float(max_size) / float(im_size_max)
+        im_scale = old_div(float(max_size), float(im_size_max))
     im = cv2.resize(im, None, None, fx=im_scale, fy=im_scale, interpolation=cv2.INTER_LINEAR)
 
     if stride == 0:
         return im, im_scale
     else:
         # pad to product of stride
-        im_height = int(np.ceil(im.shape[0] / float(stride)) * stride)
-        im_width = int(np.ceil(im.shape[1] / float(stride)) * stride)
+        im_height = int(np.ceil(old_div(im.shape[0], float(stride))) * stride)
+        im_width = int(np.ceil(old_div(im.shape[1], float(stride))) * stride)
         im_channel = im.shape[2]
         padded_im = np.zeros((im_height, im_width, im_channel))
         padded_im[:im.shape[0], :im.shape[1], :] = im

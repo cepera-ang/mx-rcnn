@@ -1,11 +1,21 @@
 """
 given a pascal voc imdb, compute mAP
 """
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import absolute_import
 
-from ..logger import logger
+from builtins import open
+from builtins import dict
+from builtins import int
+from future import standard_library
+standard_library.install_aliases()
+from builtins import range
+from past.utils import old_div
 import numpy as np
 import os
-import cPickle
+import pickle
 
 
 def parse_voc_rec(filename):
@@ -22,10 +32,10 @@ def parse_voc_rec(filename):
         obj_dict['name'] = obj.find('name').text
         obj_dict['difficult'] = int(obj.find('difficult').text)
         bbox = obj.find('bndbox')
-        obj_dict['bbox'] = [int(float(bbox.find('xmin').text)),
-                            int(float(bbox.find('ymin').text)),
-                            int(float(bbox.find('xmax').text)),
-                            int(float(bbox.find('ymax').text))]
+        obj_dict['bbox'] = [int(bbox.find('xmin').text),
+                            int(bbox.find('ymin').text),
+                            int(bbox.find('xmax').text),
+                            int(bbox.find('ymax').text)]
         objects.append(obj_dict)
     return objects
 
@@ -46,11 +56,11 @@ def voc_ap(rec, prec, use_07_metric=False):
                 p = 0
             else:
                 p = np.max(prec[rec >= t])
-            ap += p / 11.
+            ap += old_div(p, 11.)
     else:
         # append sentinel values at both ends
-        mrec = np.concatenate(([0.], rec, [1.]))
-        mpre = np.concatenate(([0.], prec, [0.]))
+        mrec = np.concatenate([0.], rec, [1.])
+        mpre = np.concatenate([0.], prec, [0.])
 
         # compute precision integration ladder
         for i in range(mpre.size - 1, 0, -1):
@@ -86,13 +96,13 @@ def voc_eval(detpath, annopath, imageset_file, classname, annocache, ovthresh=0.
         for ind, image_filename in enumerate(image_filenames):
             recs[image_filename] = parse_voc_rec(annopath.format(image_filename))
             if ind % 100 == 0:
-                logger.info('reading annotations for %d/%d' % (ind + 1, len(image_filenames)))
-        logger.info('saving annotations cache to %s' % annocache)
+                print('reading annotations for {:d}/{:d}'.format(ind + 1, len(image_filenames)))
+        print('saving annotations cache to {:s}'.format(annocache))
         with open(annocache, 'wb') as f:
-            cPickle.dump(recs, f, protocol=cPickle.HIGHEST_PROTOCOL)
+            pickle.dump(recs, f, protocol=pickle.HIGHEST_PROTOCOL)
     else:
         with open(annocache, 'rb') as f:
-            recs = cPickle.load(f)
+            recs = pickle.load(f)
 
     # extract objects in :param classname:
     class_recs = {}
@@ -118,11 +128,10 @@ def voc_eval(detpath, annopath, imageset_file, classname, annocache, ovthresh=0.
     bbox = np.array([[float(z) for z in x[2:]] for x in splitlines])
 
     # sort by confidence
-    if bbox.shape[0] > 0:
-        sorted_inds = np.argsort(-confidence)
-        sorted_scores = np.sort(-confidence)
-        bbox = bbox[sorted_inds, :]
-        image_ids = [image_ids[x] for x in sorted_inds]
+    sorted_inds = np.argsort(-confidence)
+    sorted_scores = np.sort(-confidence)
+    bbox = bbox[sorted_inds, :]
+    image_ids = [image_ids[x] for x in sorted_inds]
 
     # go down detections and mark true positives and false positives
     nd = len(image_ids)
@@ -150,7 +159,7 @@ def voc_eval(detpath, annopath, imageset_file, classname, annocache, ovthresh=0.
                    (bbgt[:, 2] - bbgt[:, 0] + 1.) *
                    (bbgt[:, 3] - bbgt[:, 1] + 1.) - inters)
 
-            overlaps = inters / uni
+            overlaps = old_div(inters, uni)
             ovmax = np.max(overlaps)
             jmax = np.argmax(overlaps)
 
@@ -167,9 +176,9 @@ def voc_eval(detpath, annopath, imageset_file, classname, annocache, ovthresh=0.
     # compute precision recall
     fp = np.cumsum(fp)
     tp = np.cumsum(tp)
-    rec = tp / float(npos)
+    rec = old_div(tp, float(npos))
     # avoid division by zero in case first detection matches a difficult ground ruth
-    prec = tp / np.maximum(tp + fp, np.finfo(np.float64).eps)
+    prec = old_div(tp, np.maximum(tp + fp, np.finfo(np.float64).eps))
     ap = voc_ap(rec, prec, use_07_metric)
 
     return rec, prec, ap

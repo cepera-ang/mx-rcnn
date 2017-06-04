@@ -1,3 +1,9 @@
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
 from distutils.core import setup
 from Cython.Build import cythonize
 from distutils.extension import Extension
@@ -11,7 +17,7 @@ ext_modules = [
         '_mask',
         sources=['maskApi.c', '_mask.pyx'],
         include_dirs=[np.get_include()],
-        extra_compile_args=['-Wno-cpp', '-Wno-unused-function', '-std=c99'],
+        extra_compile_args=[ '-std=c99', '/DLL', '/link'],
     )
 ]
 
